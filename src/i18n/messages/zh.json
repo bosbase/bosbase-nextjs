@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "title": "几小时内构建任何 AI SaaS 创业项目 | bosbase",
+    "description": "bosbase 是一个用于构建 AI SaaS 创业项目的 NextJS 模板，提供各种模板和组件，帮助您快速启动。",
+    "keywords": "bosbase,  NextJS 模板"
+  },
+  "user": {
+    "sign_in": "登录",
+    "sign_out": "退出登录"
+  },
+  "auth": {
+    "sign_in_title": "登录",
+    "sign_in_description": "选择您喜欢的登录方式",
+    "sign_in_with_google": "使用 Google 继续",
+    "sign_out": "退出登录"
+  },
+  "generate": {
+    "title": "AI 图像生成器",
+    "subtitle": "使用 AI 从文本描述创建精美的图像",
+    "api_stats_title": "API 使用统计",
+    "generate_image_title": "生成图像",
+    "tips_title": "获得更好结果的技巧",
+    "tips": {
+      "tip1": "在提示词中要具体和详细",
+      "tip2": "包含风格、情绪和构图的细节",
+      "tip3": "提及颜色、光线和视角",
+      "tip4": "使用负面提示词排除不需要的元素",
+      "tip5": "DALL-E 3 比 DALL-E 2 生成更高质量的图像",
+      "tip6": "尝试不同的提示词以找到最佳效果"
+    },
+    "generated_images_title": "生成的图像",
+    "success_message": "成功生成 {count} 张图像！",
+    "error_message": "生成图像失败",
+    "image_removed": "图像已删除",
+    "form": {
+      "prompt_label": "图像提示词 *",
+      "prompt_placeholder": "具体详细以获得最佳效果",
+      "negative_prompt_label": "负面提示词（可选）",
+      "width_label": "宽度",
+      "height_label": "高度",
+      "model_label": "模型",
+      "num_images_label": "图像数量",
+      "dalle3_fixed_sizes": "DALL-E 3 使用固定尺寸",
+      "dalle3_recommended": "DALL-E 3（推荐）",
+      "dalle2": "DALL-E 2",
+      "generating": "生成中...",
+      "generate_button": "生成图像"
+    }
+  }
+}

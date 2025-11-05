@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "title": "bosbase SaaS Startups in hours | bosbase",
+    "description": "bosbase is a NextJS boilerplate",
+    "keywords": "bosbase, SaaS Boilerplate, NextJS Boilerplate"
+  },
+  "user": {
+    "sign_in": "Sign In",
+    "sign_out": "Sign Out"
+  },
+  "auth": {
+    "sign_in_title": "Sign In",
+    "sign_in_description": "Choose your preferred sign in method",
+    "sign_in_with_google": "Continue with Google",
+    "sign_out": "Sign Out"
+  },
+  "generate": {
+    "title": "AI Image Generator",
+    "subtitle": "Create stunning images from text descriptions using AI",
+    "api_stats_title": "API Usage Statistics",
+    "generate_image_title": "Generate Image",
+    "tips_title": "Tips for Better Results",
+    "tips": {
+      "tip1": "Be specific and descriptive in your prompts",
+      "tip2": "Include details about style, mood, and composition",
+      "tip3": "Mention colors, lighting, and perspective",
+      "tip4": "Use negative prompts to exclude unwanted elements",
+      "tip5": "DALL-E 3 produces higher quality images than DALL-E 2",
+      "tip6": "Experiment with different prompts to find what works best"
+    },
+    "generated_images_title": "Generated Images",
+    "success_message": "Successfully generated {count} image(s)!",
+    "error_message": "Failed to generate image",
+    "image_removed": "Image removed",
+    "form": {
+      "prompt_label": "Image Prompt *",
+      "prompt_placeholder": "Be specific and descriptive for best results",
+      "negative_prompt_label": "Negative Prompt (Optional)",
+      "width_label": "Width",
+      "height_label": "Height",
+      "model_label": "Model",
+      "num_images_label": "Number of Images",
+      "dalle3_fixed_sizes": "DALL-E 3 uses fixed sizes",
+      "dalle3_recommended": "DALL-E 3 (Recommended)",
+      "dalle2": "DALL-E 2",
+      "generating": "Generating...",
+      "generate_button": "Generate Image"
+    }
+  }
+}
