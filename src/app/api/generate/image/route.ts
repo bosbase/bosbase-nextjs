@@ -34,6 +34,13 @@ export async function POST(request: NextRequest) {
       style: model === "dall-e-3" ? "vivid" : undefined,
     });
 
+    if (!response.data) {
+      return NextResponse.json(
+        { error: "No image data returned from OpenAI" },
+        { status: 500 }
+      );
+    }
+
     const images = response.data.map((img) => img.url || "").filter(Boolean);
 
     // Note: API call is recorded client-side when button is clicked
