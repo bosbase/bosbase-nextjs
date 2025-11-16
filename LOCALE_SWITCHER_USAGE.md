@@ -36,3 +36,8 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 
 The locale switcher will automatically detect the current locale and allow switching between available languages while preserving the current route.
 
+
+
+
+
+

@@ -34,28 +34,34 @@ export async function POST(request: NextRequest) {
     // Verify collection exists and check its fields
     let collectionFields: any[] = [];
     let hasSuccessField = false;
+    let successFieldRequired = false;
     try {
       const collections = await pb.collections.getFullList();
       const collection = collections.find((c: any) => c.name === "api_calls");
       if (collection) {
         collectionFields = collection.fields || [];
-        hasSuccessField = collectionFields.some((f: any) => f.name === "success");
-        console.log("Collection fields:", collectionFields.map((f: any) => ({ name: f.name, type: f.type, required: f.required })));
-        console.log("Has success field:", hasSuccessField);
+        const successField = collectionFields.find((f: any) => f.name === "success");
+        hasSuccessField = !!successField;
+        successFieldRequired = successField?.required === true;
         
-        // If success field doesn't exist, the collection needs to be updated
-        if (!hasSuccessField) {
-          console.error("ERROR: Collection 'api_calls' does not have 'success' field! Attempting to add it...");
+        console.log("Collection fields:", collectionFields.map((f: any) => ({ name: f.name, type: f.type, required: f.required })));
+        console.log("Has success field:", hasSuccessField, "Required:", successFieldRequired);
+        
+        // If success field doesn't exist or is required=true (which means it must be true), ensure it's updated
+        if (!hasSuccessField || successFieldRequired) {
+          console.log("Ensuring collection has success field with required=false...");
           try {
-            // Try to ensure the collection has the success field
+            // Try to ensure the collection has the success field with required=false
             await ensureApiCallsCollection(pb);
             // Re-check
             const updatedCollections = await pb.collections.getFullList();
             const updatedCollection = updatedCollections.find((c: any) => c.name === "api_calls");
             if (updatedCollection) {
               collectionFields = updatedCollection.fields || [];
-              hasSuccessField = collectionFields.some((f: any) => f.name === "success");
-              console.log("After ensuring collection, hasSuccessField:", hasSuccessField);
+              const updatedSuccessField = collectionFields.find((f: any) => f.name === "success");
+              hasSuccessField = !!updatedSuccessField;
+              successFieldRequired = updatedSuccessField?.required === true;
+              console.log("After ensuring collection, hasSuccessField:", hasSuccessField, "Required:", successFieldRequired);
             }
           } catch (ensureError) {
             console.error("Failed to ensure collection has success field:", ensureError);
@@ -81,13 +87,28 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Build record data - CRITICAL: success MUST be set as a boolean in the object literal
-    // Never set it conditionally or after object creation to avoid it being missing
-    const recordData: any = {
-      endpoint: String(endpoint || "/api/generate/image"),
-      method: String(method || "POST"),
-      success: successValue, // MUST be boolean true or false - set directly in object literal
-    };
+    // Build record data - CRITICAL: success MUST be explicitly set as a boolean value
+    // IMPORTANT: BosBase backend expects the field to be present in JSON and be a boolean type
+    // JSON.stringify will preserve boolean false, but we need to ensure it's never filtered out
+    // Always set success as the FIRST property to ensure it's not accidentally removed
+    const recordData: Record<string, any> = {};
+    
+    // Explicitly set success FIRST - this ensures it's always present
+    recordData.success = successValue === true; // Explicitly convert to boolean
+    
+    // Then add other required fields
+    recordData.endpoint = String(endpoint || "/api/generate/image");
+    recordData.method = String(method || "POST");
+    
+    // Verify success is correctly set immediately
+    if (typeof recordData.success !== "boolean") {
+      console.error("CRITICAL: success is not boolean after setting! Type:", typeof recordData.success);
+      recordData.success = false;
+    }
+    if (!("success" in recordData)) {
+      console.error("CRITICAL: success field missing from recordData!");
+      recordData.success = false;
+    }
     
     // Verify success was set correctly immediately after object creation
     if (typeof recordData.success !== "boolean") {
@@ -192,8 +213,75 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      // Create record - ensure success is a boolean
-      const created = await pb.collection("api_calls").create(recordData);
+      // Final check before sending: ensure success is explicitly set as a boolean
+      // This is critical - BosBase requires the field to be present and be a boolean
+      // IMPORTANT: For bool fields, if required=true, the value MUST be true (not false)
+      // So we need to ensure the collection field is required=false to allow false values
+      if (typeof recordData.success !== "boolean") {
+        recordData.success = false;
+      }
+      
+      // If the field is required=true in the collection, we can't set it to false
+      // In that case, we need to update the collection first or set it to true
+      if (successFieldRequired && recordData.success === false) {
+        console.warn("WARNING: success field is required=true but value is false. This will fail validation.");
+        console.warn("Attempting to update collection to set required=false...");
+        // The collection should have been updated above, but if it wasn't, we'll set success to true
+        // as a workaround (though this loses information about failure)
+        // Actually, let's just ensure the collection is updated and retry
+        await ensureApiCallsCollection(pb);
+        // Re-check the field requirement
+        const recheckCollections = await pb.collections.getFullList();
+        const recheckCollection = recheckCollections.find((c: any) => c.name === "api_calls");
+        if (recheckCollection) {
+          const recheckSuccessField = (recheckCollection.fields || []).find((f: any) => f.name === "success");
+          if (recheckSuccessField?.required === true && recordData.success === false) {
+            console.error("ERROR: Cannot set success=false when field is required=true. Setting to true as workaround.");
+            recordData.success = true;
+          }
+        }
+      }
+      
+      // CRITICAL: Before sending, construct a clean object with explicit boolean values
+      // This ensures that the field is always present and is a proper boolean type
+      // The backend validation checks: v, ok := record.GetRaw(f.Name).(bool)
+      // If ok is false (field missing or wrong type), it returns an error
+      const cleanRecordData: Record<string, any> = {
+        success: Boolean(recordData.success), // Explicitly ensure it's a boolean
+        endpoint: recordData.endpoint,
+        method: recordData.method,
+      };
+      
+      // Add optional fields only if they exist
+      if (recordData.model) cleanRecordData.model = recordData.model;
+      if (recordData.prompt) cleanRecordData.prompt = recordData.prompt;
+      if (recordData.numImages !== undefined) cleanRecordData.numImages = recordData.numImages;
+      if (recordData.width !== undefined) cleanRecordData.width = recordData.width;
+      if (recordData.height !== undefined) cleanRecordData.height = recordData.height;
+      if (recordData.error) cleanRecordData.error = recordData.error;
+      if (recordData.timestamp) cleanRecordData.timestamp = recordData.timestamp;
+      
+      // Final verification: success must be a boolean
+      if (typeof cleanRecordData.success !== "boolean") {
+        console.error("FATAL: success is not boolean in cleanRecordData! Forcing to false.");
+        cleanRecordData.success = false;
+      }
+      
+      // Log the exact data being sent
+      const dataToSend = JSON.parse(JSON.stringify(cleanRecordData));
+      console.log("Data being sent to BosBase:", JSON.stringify(dataToSend, null, 2));
+      console.log("Success field verification:", {
+        value: dataToSend.success,
+        type: typeof dataToSend.success,
+        isBoolean: typeof dataToSend.success === "boolean",
+        isTrue: dataToSend.success === true,
+        isFalse: dataToSend.success === false,
+        hasField: "success" in dataToSend,
+        jsonString: JSON.stringify({ success: dataToSend.success }),
+      });
+      
+      // Create record - use cleanRecordData which has guaranteed boolean success field
+      const created = await pb.collection("api_calls").create(cleanRecordData);
     
       console.log("Successfully recorded Image Prompt in BosBase:", created.id);
 

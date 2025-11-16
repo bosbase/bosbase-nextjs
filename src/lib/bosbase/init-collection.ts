@@ -56,18 +56,41 @@ export async function ensureApiCallsCollection(pb?: BosBase): Promise<boolean> {
           { name: "updated", type: "autodate", required: false, onCreate: true, onUpdate: true },
         ];
         
-        // Check which fields are missing
+        // Check which fields are missing or need to be updated
         const missingFields = requiredFields.filter(
           (field) => !existingFieldNames.includes(field.name)
         );
         
+        // Also check for fields that need to be updated (e.g., success field with wrong required setting)
+        let needsUpdate = false;
+        const updatedFields = existingFields.map((existingField: any) => {
+          const requiredField = requiredFields.find((rf) => rf.name === existingField.name);
+          if (requiredField) {
+            // Check if the required setting needs to be updated (especially for success field)
+            if (requiredField.name === "success" && existingField.required !== requiredField.required) {
+              console.log(`Updating ${requiredField.name} field: required from ${existingField.required} to ${requiredField.required}`);
+              needsUpdate = true;
+              return {
+                ...existingField,
+                required: requiredField.required,
+              };
+            }
+          }
+          return existingField;
+        });
+        
+        // Add missing fields
         if (missingFields.length > 0) {
-          console.log(`Adding ${missingFields.length} missing fields to api_calls collection:`, missingFields.map(f => f.name));
+          for (const missingField of missingFields) {
+            updatedFields.push(missingField);
+          }
+          needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+          console.log(`Adding ${missingFields.length} missing fields and updating fields in api_calls collection`);
           
-          // Merge existing fields with missing fields (preserve existing fields with their IDs)
-          const updatedFields = [...existingFields, ...missingFields];
-          
-          // Update the collection with new fields using SDK
+          // Update the collection with new/updated fields using SDK
           // Preserve all collection properties and only update fields
           await client.collections.update(collection.id, {
             fields: updatedFields,
@@ -80,7 +103,7 @@ export async function ensureApiCallsCollection(pb?: BosBase): Promise<boolean> {
             deleteRule: collection.deleteRule || null,
           });
           
-          console.log("Successfully added missing fields to api_calls collection via BosBase SDK");
+          console.log("Successfully updated api_calls collection fields via BosBase SDK");
         }
       }
     } catch (schemaError: any) {
@@ -143,7 +166,7 @@ export async function ensureApiCallsCollection(pb?: BosBase): Promise<boolean> {
             {
               name: "success",
               type: "bool",
-              required: true,
+              required: false, // Must be false to allow both true and false values
               options: {},
             },
             {
